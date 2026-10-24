@@ -1,0 +1,1 @@
+Pictures for the 'Historical Pictures' tab are stored in this folder. Pictures added through the Admin panel arrive here automatically when you upload the update zip's images folder.
