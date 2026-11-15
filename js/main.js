@@ -52,7 +52,7 @@ const CATS=[["History","تاریخ"],["Saints","اولیاء"],["Naat","نعت"]
 const BASE={b:SITE.books.length,g:IMG.g.length,m:IMG.m.length,v:SITE.videos.length,s:IMG.s.length,h:IMG.h.length};
 let AUTH=false,MSG="",REMOTE=[],LOCAL=[];try{AUTH=sessionStorage.getItem("adm")=="1"}catch(e){}
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-let PR=0,DBST="",HID=new Set(),XID={g:[],m:[],s:[],h:[]};
+let RESET=false,PR=0,DBST="",HID=new Set(),XID={g:[],m:[],s:[],h:[]};
 const TK={book:"tBook",mag:"tMag",media:"tMedia",video:"tVid",self:"tSelf",hist:"tHist"},TABOF={book:"books",mag:"mags",media:"media",video:"videos",self:"self",hist:"hist"};
 const tabName=id=>{const t=UI.tabs.find(x=>x[0]==id);return t?(lang=="ur"?t[2]:t[1]):id};
 function toast(m){const d=document.createElement("div");d.className="toast";d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),4500)}
@@ -94,7 +94,8 @@ function merge(){SITE.books.length=BASE.b;IMG.g.length=BASE.g;IMG.m.length=BASE.
   else if(x.type=="hist"){IMG.h.push(x.img);XID.h.push(x.id);if(en)SITE.hcap[IMG.h.length-1]=T}
   else if(x.type=="video")SITE.videos.push({id:x.id,u:/^https?:\/\//.test(x.u)?esc(x.u):"#",t:T,d:D,img:x.img||""})})}
 function adminHtml(){const A=UI.adm;
- if(!AUTH)return `<div class="adm"><label>${P(A.user)}<input id="au" autocomplete="username"></label><label>${P(A.pass)}<input id="ap" type="password" autocomplete="current-password"></label><button class="btn" id="alog">${P(A.login)}</button><p class="err" id="am">${MSG}</p></div>`;
+ if(!AUTH&&RESET&&DBON())return `<div class="adm"><label>${P(A.rcode)}<input id="ac1" type="password" autocomplete="off"></label><label>${P(A.rnew)}<input id="an1" type="password" autocomplete="new-password"></label><label>${P(A.rnew2)}<input id="an2" type="password" autocomplete="new-password"></label><button class="btn" id="arun">${P(A.rbtn)}</button><button class="btn o2" id="arst">${P(A.rback)}</button><p class="err" id="am">${MSG}</p></div>`;
+ if(!AUTH)return `<div class="adm"><label>${P(A.user)}<input id="au" autocomplete="username"></label><label>${P(A.pass)}<input id="ap" type="password" autocomplete="current-password"></label><button class="btn" id="alog">${P(A.login)}</button><p class="err" id="am">${MSG}</p><p style="font-size:.85rem;color:var(--mu)">${DBON()?P(A.modeOn):P(A.modeOff)}</p>${DBON()?`<p><button class="lnk" id="arst">${P(A.rlink)}</button></p>`:""}</div>`;
  const o=(v,k)=>`<option value="${v}">${P(A[k])}</option>`,all=allItems(),st=DBON()?(DBST?`<p class="err">⚠ ${esc(DBST)}</p>`:`<p class="ok">✔ ${P(A.conn)} (${REMOTE.length})</p>`):`<p class="err">⚠ ${P(A.noconn)}</p>`;
  return `<div class="adm"><div class="row"><b>${P(A.welcome)}</b><button id="aout">${P(A.logout)}</button></div>${st}
  <label>${P(A.type)}<select id="at">${o("book","tBook")}${o("mag","tMag")}${o("media","tMedia")}${o("video","tVid")}${o("self","tSelf")}${o("hist","tHist")}</select></label>
@@ -110,10 +111,15 @@ function sync(){const s=$("#at");if(!s)return;document.querySelectorAll(".adm [d
 const _r=render;render=function(){_r();sync()};
 document.addEventListener("change",e=>{if(e.target.id=="at")sync()});
 document.addEventListener("click",async e=>{const i=e.target.id,A=UI.adm;
- if(i=="alog"){const u=$("#au").value.trim().toLowerCase().replace(/\s+/g," "),pw=$("#ap").value;let ok=false;
-  if(DBON()){if(["ashfaq niaz","اشفاق نیاز"].includes(u)){try{const r=await fetch(SUPA.url+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SUPA.key,"Content-Type":"application/json"},body:JSON.stringify({email:SUPA.email,password:pw})});if(r.ok){TOK=(await r.json()).access_token;try{sessionStorage.setItem("tok",TOK)}catch(_){}ok=true}}catch(_){}}}
+ if(i=="alog"){const u=$("#au").value.trim().toLowerCase().replace(/\s+/g," "),pw=$("#ap").value;let ok=false,er="";
+  if(DBON()){if(["ashfaq niaz","اشفاق نیاز"].includes(u)){try{const r=await fetch(SUPA.url+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:SUPA.key,"Content-Type":"application/json"},body:JSON.stringify({email:SUPA.email,password:pw})});if(r.ok){TOK=(await r.json()).access_token;try{sessionStorage.setItem("tok",TOK)}catch(_){}ok=true}else{try{const j=await r.json();er=j.error_description||j.msg||j.message||("HTTP "+r.status)}catch(_){er="HTTP "+r.status}}}catch(_){er="Network error"}}else er="Username must be: Ashfaq Niaz"}
   else{const h=await sha(u+":"+pw);ok=!!h&&OK.includes(h)}
-  if(ok){AUTH=true;MSG="";try{sessionStorage.setItem("adm","1")}catch(_){}}else MSG=P(A.bad);if(ok&&DBON()){REMOTE=await loadRemote();merge()}render()}
+  if(ok){AUTH=true;MSG="";try{sessionStorage.setItem("adm","1")}catch(_){}}else MSG=P(A.bad)+(er?" — "+esc(er):"");if(ok&&DBON()){REMOTE=await loadRemote();merge()}render()}
+ else if(i=="arst"){RESET=!RESET;MSG="";render()}
+ else if(i=="arun"){const c=$("#ac1").value,n=$("#an1").value,n2=$("#an2").value;
+  if(n.length<6||n!=n2){MSG=P(A.rpw);render();return}
+  let ok=false,st="";try{const r=await fetch(SUPA.url+"/rest/v1/rpc/reset_admin_password",{method:"POST",headers:{...H(),"Content-Type":"application/json"},body:JSON.stringify({code:c,newpass:n})});st=r.ok?"":" (HTTP "+r.status+")";ok=r.ok&&(await r.json())===true}catch(_){st=" (network)"}
+  if(ok){RESET=false;MSG="";toast(P(A.rdone))}else MSG=P(A.rbad)+st;render()}
  else if(i=="aout"){AUTH=false;MSG="";TOK="";try{sessionStorage.removeItem("adm");sessionStorage.removeItem("tok")}catch(_){}render()}
  else if(i=="aadd"){const g=s=>($(s)||{value:""}).value.trim(),t=$("#at").value,en=g("#aen"),ur=g("#aur"),f=$("#af").files[0],u=$("#al").value.trim();
   if((!(en||ur)&&t!="self"&&t!="hist")||(t!="video"&&!f)||(t=="video"&&!/^https?:\/\//.test(u))){$("#am").className="err";$("#am").textContent=P(A.need);return}
